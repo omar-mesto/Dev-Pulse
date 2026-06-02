@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --color-brand-dark: #090e1a;
+  --color-brand-deep: #0f1633;
+  --color-brand-bg: #070b18;
+  --color-brand-purple: #615fff;
+  --color-brand-purple-hover: #4f4dd4;
+  --color-brand-purple-active: #3e3afa;
+  --color-panel-dark: #0c142f;
+  --color-border-dark: #131a30;
+  --color-border-slate: #1e294b;
+  --color-input-bg: #060a18;
+  --color-input-border: #162246;
+}

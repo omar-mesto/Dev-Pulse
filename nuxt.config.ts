@@ -15,11 +15,28 @@ export default defineNuxtConfig({
     '@nuxtjs/seo'
   ],
 
+  plugins: [
+    '~/plugins/vue-query.ts'
+  ],
+
+  imports: {
+    dirs: [
+      'services',
+      'schemas',
+      'types'
+    ]
+  },
+
+  css: ['~/assets/css/main.css'],
+
   vite: {
     optimizeDeps: {
       include: [
+        '@tanstack/vue-query',
+        '@vee-validate/zod',
         '@vue/devtools-core',
-        '@vue/devtools-kit'
+        '@vue/devtools-kit',
+        'zod'
       ]
     }
   },
