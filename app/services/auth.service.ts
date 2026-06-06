@@ -1,4 +1,4 @@
-import type { LoginInput, RegisterInput } from '~/schemas/auth.schema'
+import type { LoginInput } from '~/schemas/auth.schema'
 import type { AuthResponse, SocialAuthResponse, GoogleRedirectResponse } from '~/types/auth'
 
 export const useAuthService = () => {
@@ -11,10 +11,50 @@ export const useAuthService = () => {
     })
   }
 
-  const register = async (userData: Omit<RegisterInput, 'confirmPassword'>): Promise<AuthResponse> => {
-    return await api.request<AuthResponse>('/auth/register', {
+  const adminLogin = async (credentials: AdminLoginInput): Promise<AdminAuthResponse> => {
+    return await api.request<AdminAuthResponse>('/auth/admin-login', {
       method: 'POST',
-      body: userData,
+      body: credentials,
+    })
+  }
+
+  const register = async (userData: RegisterInput): Promise<AuthResponse> => {
+    const endpoint = `/auth/register/${userData.role}`
+    
+    const basePayload: Record<string, unknown> = {
+      full_name: userData.full_name,
+      email: userData.email,
+      password: userData.password,
+      password_confirmation: userData.password_confirmation,
+      department: userData.department,
+    }
+
+    if (userData.role === 'student') {
+      basePayload.university_id = userData.university_id
+      basePayload.academic_year = userData.academic_year
+      basePayload.skills = userData.skills || []
+      basePayload.github_link = userData.github_link || null
+      basePayload.bio = userData.bio
+    } else if (userData.role === 'supervisor') {
+      basePayload.academic_title = userData.academic_title
+      basePayload.specialization = userData.specialization
+      basePayload.office_hours = userData.office_hours
+      basePayload.bio = userData.bio
+    } else if (userData.role === 'committee-member') {
+      basePayload.academic_title = userData.academic_title
+      basePayload.specialization = userData.specialization
+      basePayload.bio = userData.bio
+    }
+
+    return await api.request<AuthResponse>(endpoint, {
+      method: 'POST',
+      body: basePayload,
+    })
+  }
+
+  const getSkills = async (): Promise<string[]> => {
+    return await api.request<string[]>('/skills', {
+      method: 'GET'
     })
   }
 
@@ -37,7 +77,9 @@ export const useAuthService = () => {
 
   return {
     login,
+    adminLogin,
     register,
+    getSkills,
     getGoogleRedirect,
     verifyGoogleCallback,
   }

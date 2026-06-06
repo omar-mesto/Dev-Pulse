@@ -12,11 +12,12 @@ export interface UserProfile {
   name: string
   username: string | null
   email: string
-  role: 'student' | 'supervisor' | 'committee' | string
+  role: 'student' | 'supervisor' | 'committee' | 'Admin' | string
   status: 'active' | 'inactive' | string
   profile_completed: boolean
-  profile: Profile
-  last_login_at: string
+  profile: Profile | null
+  last_login_at: string | null
+  academic_title: string | null
   created_at: string
 }
 
@@ -54,5 +55,85 @@ export interface GoogleRedirectResponse {
   status: boolean
   data: {
     redirect_url: string
+  }
+}
+
+export interface AdminUser {
+  id: number
+  name: string
+  username: string | null
+  email: string
+  role: 'Admin'
+  status: 'active'
+  profile_completed: boolean
+  profile: null
+  last_login_at: string | null
+  created_at: string
+}
+
+export interface AdminAuthResponse {
+  status: boolean
+  message: string
+  data: {
+    user: AdminUser
+    token: string
+  }
+}
+
+export interface PendingUserProfile {
+  full_name: string
+  academic_title: string
+  department: string
+  specialization: string
+  office_hours: string | null
+  bio: string
+}
+
+export interface PendingUser {
+  id: number
+  name: string
+  username: string | null
+  email: string
+  role: 'Supervisor' | 'Committee-Member'
+  status: 'pending' | 'active'
+  profile_completed: boolean
+  profile: PendingUserProfile
+  last_login_at: string | null
+  created_at: string
+}
+
+export interface PendingUsersListResponse {
+  status: boolean
+  message: string
+  data: PendingUser[]
+}
+
+export interface AdminActionResponse {
+  status: boolean
+  message: string
+  data: PendingUser
+}
+
+export interface AdminLoginInput {
+  login: string
+  password: string
+}
+
+export interface PendingUsersResponse {
+  status: boolean
+  message?: string
+  data: UserProfile[]
+}
+
+export interface TableColumnItem {
+  id: string
+  key: string
+  label: string
+  sortable?: boolean
+}
+
+export interface MutationError {
+  data?: {
+    message?: string
   }
 }

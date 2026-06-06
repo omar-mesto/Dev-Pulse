@@ -36,11 +36,6 @@ const { mutate: executeLogin, isPending: isLoading } = useMutation({
       appToast.success('Welcome back!', `Successfully signed in as ${userName}`)
       await navigateTo('/')
     }
-  },
-  onError: (error: unknown) => {
-    console.error(error)
-    const fetchError = error as { data?: { message?: string } }
-    appToast.error('Authentication Failed', fetchError.data?.message || 'Invalid email or password')
   }
 })
 
