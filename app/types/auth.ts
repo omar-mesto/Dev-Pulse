@@ -17,7 +17,7 @@ export interface UserProfile {
   profile_completed: boolean
   profile: Profile | null
   last_login_at: string | null
-  academic_title: string | null
+  academic_title?: string | null
   created_at: string
 }
 
