@@ -2,6 +2,7 @@
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useMutation } from '@tanstack/vue-query'
+import { AdminLoginSchema } from '#imports'
 
 definePageMeta({
   layout: 'blank'
@@ -45,6 +46,7 @@ const { mutate: executeAdminLogin, isPending: isLoading } = useMutation({
     })
     
     appToast.success('Access Granted!', `Welcome back, Admin ${responseData.data.user.name}!`)
+    await navigateTo('/admin/dashboard')
   }
 }
 })
