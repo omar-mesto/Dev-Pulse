@@ -11,7 +11,7 @@ export const useAuthService = () => {
     })
   }
 
-  const adminLogin = async (credentials: AdminLoginInput): Promise<AdminAuthResponse> => {
+  const adminLogin = async (credentials: AdminLoginInputSchema): Promise<AdminAuthResponse> => {
     return await api.request<AdminAuthResponse>('/auth/admin-login', {
       method: 'POST',
       body: credentials,

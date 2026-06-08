@@ -114,15 +114,9 @@ export interface AdminActionResponse {
   data: PendingUser
 }
 
-export interface AdminLoginInput {
+export interface AdminLoginInputSchema {
   login: string
   password: string
-}
-
-export interface PendingUsersResponse {
-  status: boolean
-  message?: string
-  data: UserProfile[]
 }
 
 export interface TableColumnItem {
