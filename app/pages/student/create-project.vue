@@ -8,6 +8,8 @@ const api = useApiClient()
 const appToast = useAppToast()
 const router = useRouter()
 
+const stepErrors = reactive<Record<string, string>>({})
+
 const form = reactive<ProjectIdeaPayload>({
   title: '',
   abstract: '',
@@ -23,25 +25,66 @@ const toPascalCase = (value: string) => {
     .trim()
     .split(/[\s-_]+/)
     .filter(Boolean)
-    .map(
-      word =>
-        word.charAt(0).toUpperCase() +
-        word.slice(1).toLowerCase()
-    )
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('')
 }
 
 const addSkill = () => {
   const skill = toPascalCase(newSkill.value)
-
   if (skill && !form.required_skills.includes(skill)) {
     form.required_skills.push(skill)
     newSkill.value = ''
+    stepErrors['required_skills'] = ''
   }
 }
 
 const removeSkill = (index: number) => {
   form.required_skills.splice(index, 1)
+}
+
+const clearErrors = () => {
+  Object.keys(stepErrors).forEach(key => {
+    stepErrors[key] = ''
+  })
+}
+
+type SafeParseResult =
+  | { success: true }
+  | { success: false; error: { errors: { path: (string | number)[]; message: string }[] } }
+
+const validateStep = (step: number): boolean => {
+  clearErrors()
+
+  let result: SafeParseResult
+
+  if (step === 1) {
+    result = step1Schema.safeParse({
+      title: form.title,
+      team_size: form.team_size,
+    })
+  } else if (step === 2) {
+    result = step2Schema.safeParse({
+      abstract: form.abstract,
+      description: form.description,
+    })
+  } else {
+    result = step3Schema.safeParse({
+      required_skills: form.required_skills,
+    })
+  }
+
+  if (!result.success) {
+    result.error.errors.forEach(err => {
+      const field = String(err.path[0])
+      if (!stepErrors[field]) {
+        stepErrors[field] = err.message
+      }
+    })
+    
+return false
+  }
+
+  return true
 }
 
 const { mutate: createProject, isPending } = useMutation<ProjectIdeaResponse, Error, ProjectIdeaPayload>({
@@ -53,11 +96,13 @@ const { mutate: createProject, isPending } = useMutation<ProjectIdeaResponse, Er
   },
   onSuccess: (res) => {
     appToast.success('Success', res.message)
-    router.push('/')
+    router.push(`/student/team-builder/${res.data.project_idea.id}`)
   }
 })
 
 const nextStep = () => {
+  if (!validateStep(currentStep.value)) return
+
   if (currentStep.value < totalSteps) {
     currentStep.value++
   } else {
@@ -66,6 +111,7 @@ const nextStep = () => {
 }
 
 const prevStep = () => {
+  clearErrors()
   if (currentStep.value > 1) {
     currentStep.value--
   }
@@ -74,32 +120,23 @@ const prevStep = () => {
 
 <template>
   <div class="min-h-screen bg-bg-brand-dark text-white font-sans flex flex-col select-none">
-    <header
-      class="h-12 border-b border-brand-dark bg-brand-deep p-6 flex items-center justify-between"
-    >
+    <header class="h-12 border-b border-brand-dark bg-brand-deep p-6 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div
-          class="h-7 w-7 rounded-md bg-brand-purple flex items-center justify-center"
-        >
+        <div class="h-7 w-7 rounded-md bg-brand-purple flex items-center justify-center">
           <UIcon name="i-heroicons-bolt" class="h-4 w-4 text-white" />
         </div>
-
-        <span class="text-sm font-semibold text-white">
-          DevPulse
-        </span>
+        <span class="text-sm font-semibold text-white">DevPulse</span>
       </div>
 
       <button
         class="text-xs text-slate-500 hover:text-white transition-colors cursor-pointer"
-        @click="router.push('/dashboard')"
+        @click="router.push('/')"
       >
         Skip for now
       </button>
     </header>
 
-    <main
-      class="flex-1 pb-5 flex justify-center pt-12 px-6 bg-brand-bg"
-    >
+    <main class="flex-1 pb-5 flex justify-center pt-12 px-6 bg-brand-bg">
       <div class="w-full max-w-[520px]">
         <div class="text-center mb-2">
           <h1 class="text-3xl font-bold pb-2 text-white">
@@ -107,27 +144,17 @@ const prevStep = () => {
           </h1>
         </div>
 
-        <div
-          class="w-full h-1 rounded-full bg-border-dark overflow-hidden mb-6"
-        >
+        <div class="w-full h-1 rounded-full bg-border-dark overflow-hidden mb-6">
           <div
             class="h-full bg-brand-purple transition-all duration-300"
             :style="{ width: currentStep === 1 ? '15%' : currentStep === 2 ? '50%' : '100%' }"
           />
         </div>
 
-        <div
-          class="flex w-full  justify-around items-center gap-10 text-xs font-medium mb-8"
-        >
+        <div class="flex w-full justify-around items-center gap-10 text-xs font-medium mb-8">
           <div
             class="flex items-center gap-2"
-            :class="
-              currentStep === 1
-                ? 'text-white'
-                : currentStep > 1
-                ? 'text-emerald-400'
-                : 'text-slate-500'
-            "
+            :class="currentStep === 1 ? 'text-white' : currentStep > 1 ? 'text-emerald-400' : 'text-slate-500'"
           >
             <div
               class="h-8 w-8 rounded-full flex items-center justify-center"
@@ -140,29 +167,16 @@ const prevStep = () => {
               "
             >
               <UIcon
-                :name="
-                  currentStep > 1
-                    ? 'i-heroicons-check'
-                    : 'i-heroicons-document-text'
-                "
+                :name="currentStep > 1 ? 'i-heroicons-check' : 'i-heroicons-document-text'"
                 class="h-4 w-4"
               />
             </div>
-
-            <span :class="{ 'font-semibold': currentStep === 1 }">
-              Project Title
-            </span>
+            <span :class="{ 'font-semibold': currentStep === 1 }">Project Title</span>
           </div>
 
           <div
             class="flex items-center gap-2"
-            :class="
-              currentStep === 2
-                ? 'text-white'
-                : currentStep > 2
-                ? 'text-emerald-400'
-                : 'text-slate-500'
-            "
+            :class="currentStep === 2 ? 'text-white' : currentStep > 2 ? 'text-emerald-400' : 'text-slate-500'"
           >
             <div
               class="h-8 w-8 rounded-full flex items-center justify-center"
@@ -175,155 +189,110 @@ const prevStep = () => {
               "
             >
               <UIcon
-                :name="
-                  currentStep > 2
-                    ? 'i-heroicons-check'
-                    : 'i-heroicons-sparkles'
-                "
+                :name="currentStep > 2 ? 'i-heroicons-check' : 'i-heroicons-sparkles'"
                 class="h-4 w-4"
               />
             </div>
-
-            <span :class="{ 'font-semibold': currentStep === 2 }">
-              Abstract
-            </span>
+            <span :class="{ 'font-semibold': currentStep === 2 }">Abstract</span>
           </div>
 
           <div
             class="flex items-center gap-2"
-            :class="
-              currentStep === 3
-                ? 'text-white'
-                : 'text-slate-500'
-            "
+            :class="currentStep === 3 ? 'text-white' : 'text-slate-500'"
           >
             <div
               class="h-8 w-8 rounded-full flex items-center justify-center"
-              :class="
-                currentStep === 3
-                  ? 'bg-brand-purple text-white'
-                  : 'bg-panel-dark border border-border-dark'
-              "
+              :class="currentStep === 3 ? 'bg-brand-purple text-white' : 'bg-panel-dark border border-border-dark'"
             >
-              <UIcon
-                name="i-heroicons-layers"
-                class="h-4 w-4"
-              />
+              <UIcon name="i-heroicons-layers" class="h-4 w-4" />
             </div>
-
-            <span :class="{ 'font-semibold': currentStep === 3 }">
-              Tech Stack
-            </span>
+            <span :class="{ 'font-semibold': currentStep === 3 }">Tech Stack</span>
           </div>
         </div>
 
-        <div
-          class="bg-panel-dark border border-border-dark rounded-2xl px-7 py-6 shadow-[0_10px_40px_rgba(0,0,0,.45)]"
-        >
-          <div
-            v-if="currentStep === 1"
-            class="space-y-5"
-          >
+        <div class="bg-panel-dark border border-border-dark rounded-2xl px-7 py-6 shadow-[0_10px_40px_rgba(0,0,0,.45)]">
+          <div v-if="currentStep === 1" class="space-y-5">
             <div>
-              <h2 class="text-lg font-bold text-white">
-                What's your project called?
-              </h2>
-
-              <p class="text-xs text-slate-400 mt-1">
-                Choose a memorable name that reflects your project's purpose.
-              </p>
+              <h2 class="text-lg font-bold text-white">What's your project called?</h2>
+              <p class="text-xs text-slate-400 mt-1">Choose a memorable name that reflects your project's purpose.</p>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-300 mb-2">
-                Project Title
-              </label>
-
+              <label class="block text-xs font-medium text-slate-300 mb-2">Project Title</label>
               <input
                 v-model="form.title"
                 type="text"
                 placeholder="e.g. EcoTrack - Sustainable Living Dashboard"
-                class="w-full bg-input-bg border border-input-border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple transition-all"
+                class="w-full bg-input-bg border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none transition-all"
+                :class="stepErrors.title ? 'border-red-500 focus:border-red-500' : 'border-input-border focus:border-brand-purple'"
               >
-            </div>
-
-            <div>
-              <label class="block text-xs font-medium text-slate-300 mb-2">
-                Team Size
-              </label>
-
-              <input
-                v-model.number="form.team_size"
-                type="number"
-                min="1"
-                class="w-full bg-input-bg border border-input-border rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-purple transition-all"
-              >
-            </div>
-
-          </div>
-
-          <div
-            v-if="currentStep === 2"
-            class="space-y-5"
-          >
-            <div>
-              <h2 class="text-lg font-bold text-white">
-                Describe your project
-              </h2>
-
-              <p class="text-xs text-slate-400 mt-1">
-                Write a brief abstract explaining what your project does and its
-                goals.
+              <p v-if="stepErrors.title" class="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                <UIcon name="i-heroicons-exclamation-circle" class="h-3.5 w-3.5" />
+                {{ stepErrors.title }}
               </p>
             </div>
 
             <div>
+              <label class="block text-xs font-medium text-slate-300 mb-2">Team Size</label>
+              <input
+                v-model.number="form.team_size"
+                type="number"
+                min="1"
+                class="w-full bg-input-bg border rounded-lg px-4 py-3 text-sm text-white focus:outline-none transition-all"
+                :class="stepErrors.team_size ? 'border-red-500 focus:border-red-500' : 'border-input-border focus:border-brand-purple'"
+              >
+              <p v-if="stepErrors.team_size" class="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                <UIcon name="i-heroicons-exclamation-circle" class="h-3.5 w-3.5" />
+                {{ stepErrors.team_size }}
+              </p>
+            </div>
+          </div>
+
+          <div v-if="currentStep === 2" class="space-y-5">
+            <div>
+              <h2 class="text-lg font-bold text-white">Describe your project</h2>
+              <p class="text-xs text-slate-400 mt-1">Write a brief abstract explaining what your project does and its goals.</p>
+            </div>
+
+            <div>
               <div class="flex justify-between mb-2">
-                <label class="text-xs font-medium text-slate-300">
-                  Project Abstract
-                </label>
-
-                <span class="text-xs text-slate-500">
-                  {{ form.abstract.length }}/500
-                </span>
+                <label class="text-xs font-medium text-slate-300">Project Abstract</label>
+                <span class="text-xs text-slate-500">{{ form.abstract.length }}/500</span>
               </div>
-
               <textarea
                 v-model="form.abstract"
                 rows="2"
                 maxlength="500"
                 placeholder="Describe your project's purpose, target users, and key features..."
-                class="w-full bg-input-bg border border-input-border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple resize-none"
+                class="w-full bg-input-bg border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none"
+                :class="stepErrors.abstract ? 'border-red-500 focus:border-red-500' : 'border-input-border focus:border-brand-purple'"
               />
+              <p v-if="stepErrors.abstract" class="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                <UIcon name="i-heroicons-exclamation-circle" class="h-3.5 w-3.5" />
+                {{ stepErrors.abstract }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-300 mb-2">
-                Detailed Description
-              </label>
-
+              <label class="block text-xs font-medium text-slate-300 mb-2">Detailed Description</label>
               <textarea
                 v-model="form.description"
                 rows="2"
                 placeholder="Provide further detailed requirements or features..."
-                class="w-full bg-input-bg border border-input-border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple resize-none"
+                class="w-full bg-input-bg border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none"
+                :class="stepErrors.description ? 'border-red-500 focus:border-red-500' : 'border-input-border focus:border-brand-purple'"
               />
+              <p v-if="stepErrors.description" class="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+                <UIcon name="i-heroicons-exclamation-circle" class="h-3.5 w-3.5" />
+                {{ stepErrors.description }}
+              </p>
             </div>
           </div>
 
-          <div
-            v-if="currentStep === 3"
-            class="space-y-5"
-          >
+          <div v-if="currentStep === 3" class="space-y-5">
             <div>
-              <h2 class="text-lg font-bold text-white">
-                Required Skills & Frameworks
-              </h2>
-
-              <p class="text-xs text-slate-400 mt-1">
-                Add technical frameworks and tools necessary to accomplish this
-                scope.
-              </p>
+              <h2 class="text-lg font-bold text-white">Required Skills & Frameworks</h2>
+              <p class="text-xs text-slate-400 mt-1">Add technical frameworks and tools necessary to accomplish this scope.</p>
             </div>
 
             <div class="flex gap-2">
@@ -334,7 +303,6 @@ const prevStep = () => {
                 class="flex-1 bg-input-bg border border-input-border rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[var(--color-brand-purple)]"
                 @keydown.enter.prevent="addSkill"
               >
-
               <button
                 type="button"
                 class="bg-brand-purple hover:bg-purple-hover text-white px-5 rounded-lg text-sm font-medium"
@@ -351,7 +319,6 @@ const prevStep = () => {
                 class="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-brand-purple)]/10 text-[#9b9aff] border border-[var(--color-brand-purple)]/20 rounded-md text-xs font-medium"
               >
                 {{ skill }}
-
                 <UIcon
                   name="i-heroicons-x-mark"
                   class="h-3 w-3 cursor-pointer"
@@ -359,32 +326,26 @@ const prevStep = () => {
                 />
               </span>
 
-              <p
-                v-if="!form.required_skills.length"
-                class="text-xs text-slate-500"
-              >
+              <p v-if="!form.required_skills.length" class="text-xs text-slate-500">
                 No infrastructure skills injected yet.
               </p>
             </div>
+
+            <p v-if="stepErrors.required_skills" class="text-xs text-red-400 flex items-center gap-1">
+              <UIcon name="i-heroicons-exclamation-circle" class="h-3.5 w-3.5" />
+              {{ stepErrors.required_skills }}
+            </p>
           </div>
 
-          <div
-            class="flex justify-between items-center mt-8 pt-5 border-t border-[var(--color-border-dark)]"
-          >
+          <div class="flex justify-between items-center mt-8 pt-5 border-t border-[var(--color-border-dark)]">
             <button
               type="button"
               :class="{ 'opacity-0 pointer-events-none': currentStep === 1 }"
               class="flex items-center gap-2 text-slate-500 hover:text-white transition-colors"
               @click="prevStep"
             >
-              <UIcon
-                name="i-heroicons-arrow-left"
-                class="h-4 w-4"
-              />
-
-              <span class="text-sm">
-                Back
-              </span>
+              <UIcon name="i-heroicons-arrow-left" class="h-4 w-4" />
+              <span class="text-sm">Back</span>
             </button>
 
             <button
@@ -393,10 +354,7 @@ const prevStep = () => {
               class="flex items-center gap-2 bg-brand-purple hover:bg-brand-purple-hover active:bg-brand-purple-active text-white font-medium px-5 py-2.5 rounded-xl transition-all disabled:opacity-50"
               @click="nextStep"
             >
-              <span>
-                {{ currentStep === totalSteps ? 'Submit Idea' : 'Continue' }}
-              </span>
-
+              <span>{{ currentStep === totalSteps ? 'Submit Idea' : 'Continue' }}</span>
               <UIcon
                 v-if="currentStep < totalSteps"
                 name="i-heroicons-arrow-right"

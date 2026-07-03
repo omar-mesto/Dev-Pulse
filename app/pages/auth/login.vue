@@ -34,7 +34,12 @@ const { mutate: executeLogin, isPending: isLoading } = useMutation({
       const userName = responseData.data.user.name || 'User'
       
       appToast.success('Welcome back!', `Successfully signed in as ${userName}`)
-      await navigateTo('/')
+      const userRole = responseData.data.user.role
+      if (userRole === 'Student' || userRole === 'student') {
+        await navigateTo('/student/my-projects')
+      } else {
+        await navigateTo('/')
+      }
     }
   }
 })
@@ -181,9 +186,6 @@ const inputUiConfig = {
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
                 <label class="block text-xs font-bold text-slate-300">Password</label>
-                <ULink to="/auth/forgot-password" class="text-xs font-semibold text-brand-purple hover:text-brand-purple-hover transition-colors">
-                  Forgot password?
-                </ULink>
               </div>
               <div class="relative">
                 <UInput

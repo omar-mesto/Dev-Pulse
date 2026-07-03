@@ -6,6 +6,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
 
+  icon: {
+    serverBundle: {
+      collections: ['uil', 'mdi']
+    }
+  },
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
